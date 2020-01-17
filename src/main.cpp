@@ -83,7 +83,7 @@ void autonomous() {
 	left_intake = 100;
 	right_intake = -100;
 
-	pros::delay(8000);
+	pros::delay(9000);
 
 	left_drive1 = 0;
 	left_drive2 = 0;
