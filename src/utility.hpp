@@ -65,3 +65,13 @@ void limitMotor(pros::Motor mtr, int speed, int lower, int upper){
         mtr = speed;
     }
 }
+
+void forceLimitMotor(pros::Motor mtr, int speed, int lower, int upper){
+    if(mtr.get_raw_position(NULL) <= lower && speed < 0){
+        mtr = -speed;
+    }else if(mtr.get_raw_position(NULL) >= upper && speed > 0){
+        mtr = -speed;
+    }else{
+        mtr = speed;
+    }
+}

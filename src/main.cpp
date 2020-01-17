@@ -26,7 +26,6 @@ void on_center_button() {
  */
 void initialize() {
 	pros::lcd::initialize();
-	pros::lcd::set_text(1, "Hello PROS User!");
 
 	pros::lcd::register_btn1_cb(on_center_button);
 }
@@ -63,29 +62,35 @@ void competition_initialize() {
  * from where it left off.
  */
 void autonomous() {
-	pros::Motor left_drive1(9);
-	pros::Motor left_drive2(10);
-	pros::Motor right_drive1(1);
-	pros::Motor right_drive2(2);
+	pros::Motor left_drive1(19);
+	pros::Motor left_drive2(12);
+	pros::Motor right_drive1(20);
+	pros::Motor right_drive2(11);
+	pros::Motor left_intake(1);
+	left_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
+	pros::Motor right_intake(2);
+	right_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
+	pros::Motor tray(5);
+	tray.set_brake_mode(MOTOR_BRAKE_BRAKE);
+	tray.tare_position();
+	pros::Motor lift(6);
+	lift.set_brake_mode(MOTOR_BRAKE_BRAKE);
 
-	left_drive1 = 50;
-	left_drive2 = -50;
-	right_drive1 = -50;
-	right_drive2 = 50;
+	left_drive1 = 25;
+	left_drive2 = 25;
+	right_drive1 = -25;
+	right_drive2 = -25;
+	left_intake = 100;
+	right_intake = -100;
 
-	pros::delay(2000);
-
-	left_drive1 = -50;
-	left_drive2 = 50;
-	right_drive1 = 50;
-	right_drive2 = -50;
-
-	pros::delay(2000);
+	pros::delay(8000);
 
 	left_drive1 = 0;
 	left_drive2 = 0;
 	right_drive1 = 0;
 	right_drive2 = 0;
+	left_intake = 0;
+	right_intake = 0;
 }
 
 /**
@@ -127,6 +132,8 @@ void opcontrol() {
 		                 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);
 
 		pros::lcd::print(2, "%d", tray.get_raw_position(NULL));
+		pros::lcd::print(3, "%d", lift.get_raw_position(NULL));
+
 
 		if(master.get_digital(DIGITAL_X)){
 			tank = false;
