@@ -1,6 +1,7 @@
 #include "main.h"
 #include "pros/apix.h"
 #include "utility.hpp"
+#include "selection.h"
 #include <algorithm>
 
 /**
@@ -28,7 +29,7 @@ void on_center_button() {
 void initialize() {
 	pros::lcd::initialize();
 
-	pros::lcd::register_btn1_cb(on_center_button);
+	selectorInit();
 }
 
 /**
@@ -63,6 +64,11 @@ void competition_initialize() {
  * from where it left off.
  */
 void autonomous() {
+
+	if(abs(autonSelection) == 3){
+		return;
+	}
+
 	pros::Motor left_drive1(19);
 	pros::Motor left_drive2(12);
 	pros::Motor right_drive1(20);
@@ -95,10 +101,17 @@ void autonomous() {
 
 	pros::delay(2000);
 
-	left_drive1 = 75;
-	left_drive2 = 75;
-	right_drive1 = 75;
-	right_drive2 = 75;
+	if(autonSelection < 0){
+		left_drive1 = 75;
+		left_drive2 = 75;
+		right_drive1 = 75;
+		right_drive2 = 75;
+	}else if(autonSelection > 0){
+		left_drive1 = -75;
+		left_drive2 = -75;
+		right_drive1 = -75;
+		right_drive2 = -75;
+	}
 	left_intake = 0;
 	right_intake = 0;
 
