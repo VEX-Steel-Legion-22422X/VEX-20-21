@@ -1,6 +1,7 @@
 #include "main.h"
 #include "pros/apix.h"
 #include "utility.hpp"
+#include <algorithm>
 
 /**
  * A callback function for LLEMU's center button.
@@ -75,15 +76,70 @@ void autonomous() {
 	tray.tare_position();
 	pros::Motor lift(6);
 	lift.set_brake_mode(MOTOR_BRAKE_BRAKE);
+	pros::ADIUltrasonic rear_ultrasonic(1, 2);
+	pros::ADIDigitalIn front_limitSwitch(8);
 
-	left_drive1 = 25;
-	left_drive2 = 25;
-	right_drive1 = -25;
-	right_drive2 = -25;
+	left_drive1 = 35;
+	left_drive2 = 35;
+	right_drive1 = -35;
+	right_drive2 = -35;
 	left_intake = 100;
 	right_intake = -100;
 
-	pros::delay(9000);
+	pros::delay(5000);
+
+	left_drive1 = -75;
+	left_drive2 = -75;
+	right_drive1 = 75;
+	right_drive2 = 75;
+
+	pros::delay(2000);
+
+	left_drive1 = 75;
+	left_drive2 = 75;
+	right_drive1 = 75;
+	right_drive2 = 75;
+	left_intake = 0;
+	right_intake = 0;
+
+	pros::delay(900);
+
+	left_drive1 = 35;
+	left_drive2 = 35;
+	right_drive1 = -30;
+	right_drive2 = -30;
+
+	while(front_limitSwitch.get_value() == 0){
+		pros::delay(25);
+	}
+
+	left_drive1 = 0;
+	left_drive2 = 0;
+	right_drive1 = 0;
+	right_drive2 = 0;
+	left_intake = -50;
+	right_intake = 50;
+
+	pros::delay(300);
+
+	left_intake = 0;
+	right_intake = 0;
+
+	while(tray.get_raw_position(NULL) < 3450){
+		int speed = scale(tray.get_raw_position(NULL), 1200, 3400, 128, 30);
+		limitMotor(tray, trim(tray.get_raw_position(NULL) > 1200 ? speed : 128, 30, 128), 0, 3500);
+		pros::delay(25);
+	}
+
+	tray = 0;
+	left_drive1 = -50;
+	left_drive2 = -50;
+	right_drive1 = 50;
+	right_drive2 = 50;
+	left_intake = -80;
+	right_intake = 80;
+
+	pros::delay(1000);
 
 	left_drive1 = 0;
 	left_drive2 = 0;
@@ -91,6 +147,13 @@ void autonomous() {
 	right_drive2 = 0;
 	left_intake = 0;
 	right_intake = 0;
+
+	while(tray.get_raw_position(NULL) > 0){
+		limitMotor(tray, -80, -50, 3500);
+		pros::delay(25);
+	}
+
+	tray = 0;
 }
 
 /**
@@ -109,9 +172,13 @@ void autonomous() {
 void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
 	pros::Motor left_drive1(19);
+	left_drive1.set_gearing(MOTOR_GEARSET_18);
 	pros::Motor left_drive2(12);
+	left_drive2.set_gearing(MOTOR_GEARSET_18);
 	pros::Motor right_drive1(20);
+	right_drive1.set_gearing(MOTOR_GEARSET_18);
 	pros::Motor right_drive2(11);
+	right_drive2.set_gearing(MOTOR_GEARSET_18);
 	pros::Motor left_intake(1);
 	left_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
 	pros::Motor right_intake(2);
@@ -121,6 +188,9 @@ void opcontrol() {
 	tray.tare_position();
 	pros::Motor lift(6);
 	lift.set_brake_mode(MOTOR_BRAKE_BRAKE);
+
+	pros::ADIUltrasonic rear_ultrasonic(1, 2);
+	pros::ADIDigitalIn front_limitSwitch(8);
 
 	int left = 0;
 	int right = 0;
@@ -133,6 +203,7 @@ void opcontrol() {
 
 		pros::lcd::print(2, "%d", tray.get_raw_position(NULL));
 		pros::lcd::print(3, "%d", lift.get_raw_position(NULL));
+		pros::lcd::print(5, "%d", rear_ultrasonic.get_value());
 
 
 		if(master.get_digital(DIGITAL_X)){
@@ -148,8 +219,8 @@ void opcontrol() {
 				left = leftTarget;
 				right = rightTarget;
 			}else{
-				left = limitAcceleration(left, leftTarget, 3, 5);
-				right = limitAcceleration(right, rightTarget, 3, 5);
+				left = limitAcceleration(left, leftTarget, 4, 5);
+				right = limitAcceleration(right, rightTarget, 4, 5);
 			}
 		}else{
 			int direction = deadband(master.get_analog(ANALOG_LEFT_X), 5);
@@ -158,8 +229,8 @@ void opcontrol() {
 				left = calcLeftDrive(speed, direction);
 				right = calcRightDrive(speed, direction);
 			}else{
-				left = limitAcceleration(left, calcLeftDrive(speed, direction), 3, 5);
-				right = limitAcceleration(right, calcRightDrive(speed, direction), 3, 5);
+				left = limitAcceleration(left, calcLeftDrive(speed, direction), 4, 5);
+				right = limitAcceleration(right, calcRightDrive(speed, direction), 4, 5);
 			}
 		}
 
@@ -179,22 +250,28 @@ void opcontrol() {
 			right_intake = 0;
 		}
 
-		if(master.get_digital(DIGITAL_UP)){
-			lift = -100;
-		}else if(master.get_digital(DIGITAL_DOWN)){
+		if(master.get_digital(DIGITAL_R1)){
+			lift = -100; //max encoder 2500
+		}else if(master.get_digital(DIGITAL_R2)){
 			lift = 50;
 		}else{
 			lift = 0;
 		}
 
-		if(master.get_digital(DIGITAL_R1)){
+		if(master.get_digital(DIGITAL_UP)){
 			int speed = scale(tray.get_raw_position(NULL), 1200, 3400, 128, 30);
-			limitMotor(tray, trim(tray.get_raw_position(NULL) > 1200 ? speed : 128, 30, 128), 0, 3500);
+			limitMotor(tray, trim(tray.get_raw_position(NULL) > 1200 ? speed : 128, 30, 128), 0, 3450);
 			pros::lcd::print(3, "%d", speed);
-		}else if(master.get_digital(DIGITAL_R2)){
-			limitMotor(tray, -80, 0, 3500);
+		}else if(master.get_digital(DIGITAL_DOWN)){
+			limitMotor(tray, -100, 0, 3450);
 		}else{
-			tray = 0;
+			int trayLowerLimit = min(max(-lift.get_raw_position(NULL), 0), 1200);
+			int trayUpperLimit = 4000;
+			if(trayLowerLimit > 400){
+				trayUpperLimit = trayLowerLimit + 200;
+			}
+			forceLimitMotor(tray, 0, 80, trayLowerLimit, trayUpperLimit);
+			pros::lcd::print(4, "%d, %d", trayLowerLimit, trayUpperLimit);
 		}
 
 		pros::delay(20);
