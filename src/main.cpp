@@ -5,30 +5,12 @@
 #include <algorithm>
 
 /**
- * A callback function for LLEMU's center button.
- *
- * When this callback is fired, it will toggle line 2 of the LCD text between
- * "I was pressed!" and nothing.
- */
-void on_center_button() {
-	static bool pressed = false;
-	pressed = !pressed;
-	if (pressed) {
-		pros::lcd::set_text(2, "I was pressed!");
-	} else {
-		pros::lcd::clear_line(2);
-	}
-}
-
-/**
  * Runs initialization code. This occurs as soon as the program is started.
  *
  * All other competition modes are blocked by initialize; it is recommended
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-	pros::lcd::initialize();
-
 	selectorInit();
 }
 
@@ -115,12 +97,12 @@ void autonomous() {
 	left_intake = 0;
 	right_intake = 0;
 
-	pros::delay(900);
+	pros::delay(800);
 
 	left_drive1 = 35;
 	left_drive2 = 35;
-	right_drive1 = -30;
-	right_drive2 = -30;
+	right_drive1 = -35;
+	right_drive2 = -35;
 
 	while(front_limitSwitch.get_value() == 0){
 		pros::delay(25);
@@ -152,7 +134,7 @@ void autonomous() {
 	left_intake = -80;
 	right_intake = 80;
 
-	pros::delay(1000);
+	pros::delay(800);
 
 	left_drive1 = 0;
 	left_drive2 = 0;
@@ -162,7 +144,7 @@ void autonomous() {
 	right_intake = 0;
 
 	while(tray.get_raw_position(NULL) > 0){
-		limitMotor(tray, -80, -50, 3500);
+		limitMotor(tray, -100, -50, 3500);
 		pros::delay(25);
 	}
 
@@ -204,10 +186,12 @@ void opcontrol() {
 
 	pros::ADIUltrasonic rear_ultrasonic(1, 2);
 	pros::ADIDigitalIn front_limitSwitch(8);
+	
 
 	int left = 0;
 	int right = 0;
 	bool tank = true;
+	int lastLimit = 0;
 
 	while (true) {
 		pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
@@ -217,6 +201,13 @@ void opcontrol() {
 		pros::lcd::print(2, "%d", tray.get_raw_position(NULL));
 		pros::lcd::print(3, "%d", lift.get_raw_position(NULL));
 		pros::lcd::print(5, "%d", rear_ultrasonic.get_value());
+
+		if(front_limitSwitch.get_value() == 1 && lastLimit == 0){
+			master.rumble("-");
+			lastLimit = 1;
+		}else if(front_limitSwitch.get_value() == 0){
+			lastLimit = 0;
+		}
 
 
 		if(master.get_digital(DIGITAL_X)){
