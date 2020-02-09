@@ -186,7 +186,8 @@ void opcontrol() {
 
 	pros::ADIUltrasonic rear_ultrasonic(1, 2);
 	pros::ADIDigitalIn front_limitSwitch(8);
-	
+	pros::Imu imu(3);
+
 
 	int left = 0;
 	int right = 0;
@@ -194,6 +195,7 @@ void opcontrol() {
 	int lastLimit = 0;
 
 	while (true) {
+		pros::lcd::initialize();
 		pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
 		                 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
 		                 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);
@@ -201,6 +203,7 @@ void opcontrol() {
 		pros::lcd::print(2, "%d", tray.get_raw_position(NULL));
 		pros::lcd::print(3, "%d", lift.get_raw_position(NULL));
 		pros::lcd::print(5, "%d", rear_ultrasonic.get_value());
+		pros::lcd::print(6, "%d", imu.get_heading());
 
 		if(front_limitSwitch.get_value() == 1 && lastLimit == 0){
 			master.rumble("-");
