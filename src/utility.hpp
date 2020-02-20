@@ -23,11 +23,11 @@ int cubifySpeed(int val){
 }
 
 int calcLeftDrive(int y, int x){
-    return cubifySpeed(y + (x * 0.8));
+    return cubifySpeed(y + (x * 0.85));
 }
 
 int calcRightDrive(int y, int x){
-    return cubifySpeed(y - (x * 0.8));
+    return cubifySpeed(y - (x * 0.85));
 }
 
 int deadband(int val, int limit){

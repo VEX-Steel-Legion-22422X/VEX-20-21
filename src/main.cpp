@@ -45,6 +45,18 @@ void competition_initialize() {
  * will be stopped. Re-enabling the robot will restart the task, not re-start it
  * from where it left off.
  */
+std::shared_ptr<ChassisController> robot =
+ 	ChassisControllerBuilder()
+	.withMotors({19, 12}, {-20, -11})
+	.withDimensions(AbstractMotor::gearset::green, {{3.25_in, 10_in}, imev5GreenTPR})
+	.build();
+
+std::shared_ptr<AsyncMotionProfileController> profileController =
+	AsyncMotionProfileControllerBuilder()
+	.withLimits({1.0, 2.0, 10.0})
+	.withOutput(robot)
+	.buildMotionProfileController();
+
 void autonomous() {
 
 	if(abs(autonSelection) == 3){
@@ -164,6 +176,10 @@ void autonomous() {
  * operator control task will be stopped. Re-enabling the robot will restart the
  * task, not resume it from where it left off.
  */
+const int maxAccel = 5;
+const int maxDecel = 5;
+const int stickDeadband = 5;
+
 void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
 	pros::Motor left_drive1(19);
@@ -188,22 +204,19 @@ void opcontrol() {
 	pros::ADIDigitalIn front_limitSwitch(8);
 	pros::Imu imu(3);
 
-
 	int left = 0;
 	int right = 0;
 	bool tank = true;
 	int lastLimit = 0;
+	int liftState = 0;
 
+	pros::lcd::initialize();
 	while (true) {
-		pros::lcd::initialize();
-		pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
-		                 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
-		                 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);
-
 		pros::lcd::print(2, "%d", tray.get_raw_position(NULL));
 		pros::lcd::print(3, "%d", lift.get_raw_position(NULL));
 		pros::lcd::print(5, "%d", rear_ultrasonic.get_value());
-		pros::lcd::print(6, "%d", imu.get_heading());
+		pros::lcd::print(6, "%d", imu.get_gyro_rate().y);
+
 
 		if(front_limitSwitch.get_value() == 1 && lastLimit == 0){
 			master.rumble("-");
@@ -220,24 +233,24 @@ void opcontrol() {
 		}
 
 		if(tank){
-			int leftTarget = deadband(master.get_analog(ANALOG_LEFT_Y), 5);
-			int rightTarget = deadband(master.get_analog(ANALOG_RIGHT_Y), 5);
+			int leftTarget = deadband(master.get_analog(ANALOG_LEFT_Y), stickDeadband);
+			int rightTarget = deadband(master.get_analog(ANALOG_RIGHT_Y), stickDeadband);
 			if(master.get_digital(DIGITAL_A)){
 				left = leftTarget;
 				right = rightTarget;
 			}else{
-				left = limitAcceleration(left, leftTarget, 4, 5);
-				right = limitAcceleration(right, rightTarget, 4, 5);
+				left = limitAcceleration(left, leftTarget, maxAccel, maxDecel);
+				right = limitAcceleration(right, rightTarget, maxAccel, maxDecel);
 			}
 		}else{
-			int direction = deadband(master.get_analog(ANALOG_LEFT_X), 5);
-			int speed = deadband(master.get_analog(ANALOG_RIGHT_Y), 5);
+			int direction = deadband(master.get_analog(ANALOG_LEFT_X), stickDeadband);
+			int speed = deadband(master.get_analog(ANALOG_RIGHT_Y), stickDeadband);
 			if(master.get_digital(DIGITAL_A)){
 				left = calcLeftDrive(speed, direction);
 				right = calcRightDrive(speed, direction);
 			}else{
-				left = limitAcceleration(left, calcLeftDrive(speed, direction), 4, 5);
-				right = limitAcceleration(right, calcRightDrive(speed, direction), 4, 5);
+				left = limitAcceleration(left, calcLeftDrive(speed, direction), maxAccel, maxDecel);
+				right = limitAcceleration(right, calcRightDrive(speed, direction), maxAccel, maxDecel);
 			}
 		}
 
@@ -247,8 +260,8 @@ void opcontrol() {
 		right_drive2 = -right;
 
 		if(master.get_digital(DIGITAL_L1)){
-			left_intake = 100;
-			right_intake = -100;
+			left_intake = 127;
+			right_intake = -127;
 		}else if(master.get_digital(DIGITAL_L2)){
 			left_intake = -100;
 			right_intake = 100;
@@ -257,12 +270,26 @@ void opcontrol() {
 			right_intake = 0;
 		}
 
-		if(master.get_digital(DIGITAL_R1)){
-			lift = -100; //max encoder 2500
-		}else if(master.get_digital(DIGITAL_R2)){
-			lift = 50;
+		if(master.get_digital(DIGITAL_R2)) liftState = 0;
+		if(master.get_digital(DIGITAL_R1)) liftState = 1;
+		if(master.get_digital(DIGITAL_A)) liftState = 2;
+		if(liftState == 0){
+			forceLimitMotor(lift, 0, 127, 0, 100);
+		}else if(liftState == 1){
+			forceLimitMotor(lift, 0, 127, -1800, -1700);
+		}else if(liftState == 2){
+			forceLimitMotor(lift, 0, 127, -2500, -2400);
+		}
+
+		if(master.get_digital(DIGITAL_RIGHT)){
+			liftState = 3;
+			lift = -120; //max encoder 2500
 		}else{
 			lift = 0;
+		}
+		if(master.get_digital(DIGITAL_LEFT)){
+			liftState = 3;
+			lift = 120;
 		}
 
 		if(master.get_digital(DIGITAL_UP)){
@@ -275,7 +302,7 @@ void opcontrol() {
 			int trayLowerLimit = min(max(-lift.get_raw_position(NULL), 0), 1200);
 			int trayUpperLimit = 4000;
 			if(trayLowerLimit > 400){
-				trayUpperLimit = trayLowerLimit + 200;
+				trayUpperLimit = trayLowerLimit + 100;
 			}
 			forceLimitMotor(tray, 0, 80, trayLowerLimit, trayUpperLimit);
 			pros::lcd::print(4, "%d, %d", trayLowerLimit, trayUpperLimit);
