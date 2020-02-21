@@ -79,21 +79,23 @@ void autonomous() {
 	pros::ADIUltrasonic rear_ultrasonic(1, 2);
 	pros::ADIDigitalIn front_limitSwitch(8);
 
-	left_drive1 = 35;
-	left_drive2 = 35;
-	right_drive1 = -35;
-	right_drive2 = -35;
-	left_intake = 100;
-	right_intake = -100;
+	left_drive1 = 40;
+	left_drive2 = 40;
+	right_drive1 = -40;
+	right_drive2 = -40;
+	left_intake = 127;
+	right_intake = -127;
 
-	pros::delay(5000);
+	pros::delay(4300);
 
 	left_drive1 = -75;
 	left_drive2 = -75;
 	right_drive1 = 75;
 	right_drive2 = 75;
 
-	pros::delay(2000);
+	while(rear_ultrasonic.get_value() > 220){
+		pros::delay(10);
+	}
 
 	if(autonSelection < 0){
 		left_drive1 = 75;
@@ -109,16 +111,14 @@ void autonomous() {
 	left_intake = 0;
 	right_intake = 0;
 
-	pros::delay(800);
+	pros::delay(850);
 
 	left_drive1 = 35;
 	left_drive2 = 35;
 	right_drive1 = -35;
 	right_drive2 = -35;
 
-	while(front_limitSwitch.get_value() == 0){
-		pros::delay(25);
-	}
+	pros::delay(1000);
 
 	left_drive1 = 0;
 	left_drive2 = 0;
@@ -143,8 +143,6 @@ void autonomous() {
 	left_drive2 = -50;
 	right_drive1 = 50;
 	right_drive2 = 50;
-	left_intake = -80;
-	right_intake = 80;
 
 	pros::delay(800);
 
@@ -152,8 +150,6 @@ void autonomous() {
 	left_drive2 = 0;
 	right_drive1 = 0;
 	right_drive2 = 0;
-	left_intake = 0;
-	right_intake = 0;
 
 	while(tray.get_raw_position(NULL) > 0){
 		limitMotor(tray, -100, -50, 3500);
@@ -203,10 +199,14 @@ void opcontrol() {
 	pros::ADIUltrasonic rear_ultrasonic(1, 2);
 	pros::ADIDigitalIn front_limitSwitch(8);
 	pros::Imu imu(3);
+	imu.reset();
+	while(imu.is_calibrating()){
+		pros::delay(10);
+	}
 
 	int left = 0;
 	int right = 0;
-	bool tank = true;
+	bool tank{false};
 	int lastLimit = 0;
 	int liftState = 0;
 
@@ -215,8 +215,7 @@ void opcontrol() {
 		pros::lcd::print(2, "%d", tray.get_raw_position(NULL));
 		pros::lcd::print(3, "%d", lift.get_raw_position(NULL));
 		pros::lcd::print(5, "%d", rear_ultrasonic.get_value());
-		pros::lcd::print(6, "%d", imu.get_gyro_rate().y);
-
+		pros::lcd::print(6, "%d", imu.get_rotation());
 
 		if(front_limitSwitch.get_value() == 1 && lastLimit == 0){
 			master.rumble("-");
@@ -284,12 +283,11 @@ void opcontrol() {
 		if(master.get_digital(DIGITAL_RIGHT)){
 			liftState = 3;
 			lift = -120; //max encoder 2500
-		}else{
-			lift = 0;
-		}
-		if(master.get_digital(DIGITAL_LEFT)){
+		}else if(master.get_digital(DIGITAL_LEFT)){
 			liftState = 3;
 			lift = 120;
+		}else if(liftState == 3){
+			lift = 0;
 		}
 
 		if(master.get_digital(DIGITAL_UP)){
@@ -299,12 +297,12 @@ void opcontrol() {
 		}else if(master.get_digital(DIGITAL_DOWN)){
 			limitMotor(tray, -100, 0, 3450);
 		}else{
-			int trayLowerLimit = min(max(-lift.get_raw_position(NULL), 0), 1200);
+			int trayLowerLimit = min(max(-lift.get_raw_position(NULL), 0), 1200) - 50;
 			int trayUpperLimit = 4000;
 			if(trayLowerLimit > 400){
 				trayUpperLimit = trayLowerLimit + 100;
 			}
-			forceLimitMotor(tray, 0, 80, trayLowerLimit, trayUpperLimit);
+			forceLimitMotor(tray, 0, 100, trayLowerLimit, trayUpperLimit);
 			pros::lcd::print(4, "%d, %d", trayLowerLimit, trayUpperLimit);
 		}
 
