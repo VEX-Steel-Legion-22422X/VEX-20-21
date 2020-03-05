@@ -1,10 +1,8 @@
 #include "main.h"
-#include "pros/apix.h"
 #include "selection.h"
-#include <algorithm>
 #include "robot.hpp"
 
-Robot robot(5, 5, 5);
+Robot robot(5, 8, 5);
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -130,9 +128,17 @@ void opcontrol() {
 
 	pros::lcd::initialize();
 
-	pros::delay(2000);
+	robot.setIntakeSpeed(127);
+	robot.drive(2.75, 70);
 
-	robot.driveForward(1200, 40);
+	robot.turn(-30, 50);
+	robot.drive(3, -70);
+
+	robot.turn(0, 50);
+	robot.drive(2.75, 70);
+
+	robot.turn(140, 50);
+	robot.drive(3, 70);
 
 	while (true) {
 		pros::lcd::print(2, "%d", robot.tray.get_raw_position(NULL));
@@ -189,8 +195,8 @@ void opcontrol() {
 		}
 
 		if(master.get_digital(DIGITAL_UP)){
-			int speed = scale(robot.tray.get_raw_position(NULL), 1200, 3400, 128, 30);
-			robot.limitMotor(robot.tray, trim(robot.tray.get_raw_position(NULL) > 1200 ? speed : 128, 30, 128), 0, 3450);
+			int speed = scale(robot.tray.get_raw_position(NULL), 1200, 3400, 128, 11);
+			robot.limitMotor(robot.tray, trim(robot.tray.get_raw_position(NULL) > 1200 ? speed : 128, 30, 128), 0, 3400);
 			pros::lcd::print(3, "%d", speed);
 		}else if(master.get_digital(DIGITAL_DOWN)){
 			robot.limitMotor(robot.tray, -100, 0, 3450);

@@ -30,7 +30,8 @@ class Robot{
         int limitAcceleration(int, int, int, int);
         void limitMotor(pros::Motor, int, int, int);
         void forceLimitMotor(pros::Motor, int, int, int, int);
-        void driveForward(int, int);
+        void drive(double, int);
+        void turn(double, int);
 
     private:
         int leftSpeed;
@@ -38,14 +39,15 @@ class Robot{
         int maxAccel;
         int maxDecel;
         int joyDeadband;
+        int ticksPerFoot;
 };
 
 Robot::Robot(int maxAcceleration, int maxDeceleration, int joystickDeadband)
     :controller(pros::E_CONTROLLER_MASTER),
-    left_drive1(19, MOTOR_GEARSET_18, false, MOTOR_ENCODER_DEGREES),
-    left_drive2(12, MOTOR_GEARSET_18, false, MOTOR_ENCODER_DEGREES),
-    right_drive1(20, MOTOR_GEARSET_18, true, MOTOR_ENCODER_DEGREES),
-    right_drive2(11, MOTOR_GEARSET_18, true, MOTOR_ENCODER_DEGREES),
+    left_drive1(19, MOTOR_GEARSET_18, true, MOTOR_ENCODER_DEGREES),
+    left_drive2(12, MOTOR_GEARSET_18, true, MOTOR_ENCODER_DEGREES),
+    right_drive1(20, MOTOR_GEARSET_18, false, MOTOR_ENCODER_DEGREES),
+    right_drive2(11, MOTOR_GEARSET_18, false, MOTOR_ENCODER_DEGREES),
     left_intake(1, MOTOR_GEARSET_18, false),
     right_intake(2, MOTOR_GEARSET_18, true),
     tray(5),
@@ -73,6 +75,7 @@ Robot::Robot(int maxAcceleration, int maxDeceleration, int joystickDeadband)
     maxAccel = maxAcceleration;
     maxDecel = maxDeceleration;
     joyDeadband = joystickDeadband;
+    ticksPerFoot = (900 * 3/5) / ((3.1415 * 3.25)/12);
 }
 
 void Robot::initialize(){
@@ -187,21 +190,101 @@ void Robot::forceLimitMotor(pros::Motor mtr, int speed, int correctionSpeed, int
     }
 }
 
-void Robot::driveForward(int distance, int speed){
+void Robot::drive(double distance, int speed){
     left_drive1.tare_position();
     left_drive2.tare_position();
     right_drive1.tare_position();
     right_drive2.tare_position();
 
     double heading = imu.get_rotation();
+    while(heading == INFINITY){
+        pros::delay(25);
+        heading = imu.get_rotation();
+    }
+
+    int target = distance * ticksPerFoot;
     int traveled = 0;
-    while(abs(distance) > abs(traveled)){
+    while(abs(target) > abs(traveled)){
         traveled = (left_drive1.get_raw_position(NULL) + left_drive2.get_raw_position(NULL) +
                     right_drive1.get_raw_position(NULL) + right_drive1.get_raw_position(NULL))/4;
-        //double error = heading - imu.get_rotation();
-        setDriveSpeed(speed, speed);
+        double error = heading - imu.get_rotation();
+        setDriveSpeed(speed + error, speed - error);
         pros::delay(25);
     }
 
     setDriveSpeed(0);
+}
+
+void Robot::turn(double degrees, int maxSpeed){
+    float kp = 2.0;
+    float kd = .32;
+    float ki = .04;
+    float kcorrection = 2.1;
+
+    float drivevolt = 0;
+    float maxdrivevolt = 110;
+
+    double error;
+    double prevError;
+    double derivative;
+    double integral = 0;
+    while(fabs(imu.get_rotation() - degrees) > 1){
+        error = degrees - imu.get_rotation();
+        derivative = error - prevError;
+        prevError = error;
+
+        if((fabs(error) < 10)){
+            integral += error;
+        }else{
+            //integral = 0;
+            //keep integral as is
+        }
+
+        drivevolt = error * kp + derivative * kd + integral * ki;
+        drivevolt = trim(drivevolt, -maxdrivevolt, maxdrivevolt);
+
+        setDriveSpeed(drivevolt, -drivevolt);
+
+        pros::delay(10);
+
+    }
+
+    integral = 0;
+    int minCorrectionLoops = 10;//ensure a minimum number of correction loops
+    while(fabs(imu.get_rotation() - degrees) > .2 || minCorrectionLoops > 0) {
+        minCorrectionLoops -= 1;
+        if(fabs(derivative) < 0.05){//cancel out of loop if derivative is essentially saying no movement
+            minCorrectionLoops = 0;
+        }
+
+        error = degrees - imu.get_rotation();
+        derivative = error - prevError;
+        prevError = error;
+
+        if((fabs(error) < 10)){
+            integral += error;
+        }else{
+            //integral = 0;
+        }
+
+        drivevolt = kcorrection * (error * kp + derivative * kd + integral * ki);
+        drivevolt = trim(drivevolt, -maxdrivevolt, maxdrivevolt);
+
+        setDriveSpeed(drivevolt, -drivevolt);
+        pros::delay(10);
+    }
+    setDriveSpeed(0);
+
+    /*
+    double heading = imu.get_rotation();
+    double target = heading + degrees;
+    while(fabs(target - heading) > 1){
+        heading = imu.get_rotation();
+        double minCorrection = 0;//target > heading ? 10 : -10;
+        double correction = trim((target - heading) * 5 + minCorrection, -maxSpeed, maxSpeed);
+        setDriveSpeed(correction, -correction);
+    }
+
+    setDriveSpeed(0);
+    */
 }
