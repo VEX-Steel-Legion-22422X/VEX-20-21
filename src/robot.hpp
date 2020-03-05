@@ -31,7 +31,7 @@ class Robot{
         void limitMotor(pros::Motor, int, int, int);
         void forceLimitMotor(pros::Motor, int, int, int, int);
         void drive(double, int);
-        void turn(double, int);
+        void turn(double);
 
     private:
         int leftSpeed;
@@ -215,7 +215,7 @@ void Robot::drive(double distance, int speed){
     setDriveSpeed(0);
 }
 
-void Robot::turn(double degrees, int maxSpeed){
+void Robot::turn(double degrees){
     float kp = 2.0;
     float kd = .32;
     float ki = .04;
