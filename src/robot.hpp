@@ -217,10 +217,10 @@ void Robot::drive(double distance, int speed){
 }
 
 void Robot::turn(double degrees){
-    float kp = 2.0;
-    float kd = .32;
-    float ki = .04;
-    float kcorrection = 2.1;
+    float kp = 1;
+    float kd = 5;
+    float ki = .1;
+    float kScale = 1;
 
     float drivevolt = 0;
     float maxdrivevolt = 110;
@@ -241,7 +241,7 @@ void Robot::turn(double degrees){
             //keep integral as is
         }
 
-        drivevolt = error * kp + derivative * kd + integral * ki;
+        drivevolt = kScale * (error * kp + derivative * kd + integral * ki);
         drivevolt = trim(drivevolt, -maxdrivevolt, maxdrivevolt);
 
         setDriveSpeed(drivevolt, -drivevolt);
@@ -249,14 +249,15 @@ void Robot::turn(double degrees){
         pros::delay(10);
 
     }
+    kp = 2.0;
+    kd = .32;
+    ki = .04;
+    kScale = 2.1;
 
     integral = 0;
     int minCorrectionLoops = 10;//ensure a minimum number of correction loops
-    while(fabs(imu.get_rotation() - degrees) > .2 || minCorrectionLoops > 0) {
+    while((fabs(imu.get_rotation() - degrees) > 1 && fabs(derivative) < 0.05) || minCorrectionLoops > 0) {
         minCorrectionLoops -= 1;
-        if(fabs(derivative) < 0.05){//cancel out of loop if derivative is essentially saying no movement
-            minCorrectionLoops = 0;
-        }
 
         error = degrees - imu.get_rotation();
         derivative = error - prevError;
@@ -268,7 +269,7 @@ void Robot::turn(double degrees){
             //integral = 0;
         }
 
-        drivevolt = kcorrection * (error * kp + derivative * kd + integral * ki);
+        drivevolt = kScale * (error * kp + derivative * kd + integral * ki);
         drivevolt = trim(drivevolt, -maxdrivevolt, maxdrivevolt);
 
         setDriveSpeed(drivevolt, -drivevolt);
