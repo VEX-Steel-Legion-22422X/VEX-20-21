@@ -44,10 +44,10 @@ class Robot{
 
 Robot::Robot(int maxAcceleration, int maxDeceleration, int joystickDeadband)
     :controller(pros::E_CONTROLLER_MASTER),
-    left_drive1(19, MOTOR_GEARSET_18, true, MOTOR_ENCODER_DEGREES),
-    left_drive2(12, MOTOR_GEARSET_18, true, MOTOR_ENCODER_DEGREES),
-    right_drive1(20, MOTOR_GEARSET_18, false, MOTOR_ENCODER_DEGREES),
-    right_drive2(11, MOTOR_GEARSET_18, false, MOTOR_ENCODER_DEGREES),
+    left_drive1(19, MOTOR_GEARSET_18, true, MOTOR_ENCODER_COUNTS),
+    left_drive2(12, MOTOR_GEARSET_18, true, MOTOR_ENCODER_COUNTS),
+    right_drive1(20, MOTOR_GEARSET_18, false, MOTOR_ENCODER_COUNTS),
+    right_drive2(11, MOTOR_GEARSET_18, false, MOTOR_ENCODER_COUNTS),
     left_intake(1, MOTOR_GEARSET_18, false),
     right_intake(2, MOTOR_GEARSET_18, true),
     tray(5),
@@ -203,10 +203,11 @@ void Robot::drive(double distance, int speed){
     }
 
     int target = distance * ticksPerFoot;
-    int traveled = 0;
-    while(abs(target) > abs(traveled)){
-        traveled = (left_drive1.get_raw_position(NULL) + left_drive2.get_raw_position(NULL) +
-                    right_drive1.get_raw_position(NULL) + right_drive1.get_raw_position(NULL))/4;
+    double traveled = 0;
+    while(abs(target) > fabs(traveled)){
+        traveled = (left_drive1.get_position() + left_drive2.get_position() +
+                    right_drive1.get_position() + right_drive1.get_position())/4;
+        pros::lcd::print(0, "%f", traveled);
         double error = heading - imu.get_rotation();
         setDriveSpeed(speed + error, speed - error);
         pros::delay(25);

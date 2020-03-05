@@ -11,8 +11,8 @@ Robot robot(5, 8, 5);
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-	selectorInit();
 	robot.initialize();
+	selectorInit();
 }
 
 /**
@@ -49,6 +49,22 @@ void competition_initialize() {
 
 void autonomous() {
 
+	robot.setIntakeSpeed(127);
+	robot.drive(2, 30);
+
+	pros::delay(1000);
+
+	robot.turn(-60);
+	robot.drive(2, -50);
+/*
+	robot.turn(0, 50);
+	robot.drive(2.75, 70);
+
+	robot.turn(140, 50);
+	robot.drive(3, 70);
+*/
+
+	/*
 	if(abs(autonSelection) == 3){
 		return;
 	}
@@ -103,6 +119,7 @@ void autonomous() {
 	}
 
 	robot.tray = 0;
+	*/
 }
 
 /**
@@ -121,26 +138,14 @@ void autonomous() {
 
 void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
+	pros::lcd::initialize();
 
 	bool tank{false};
 	int lastLimit = 0;
 	int liftState = 0;
 
-	pros::lcd::initialize();
-
-	robot.setIntakeSpeed(127);
-	robot.drive(2.75, 70);
-
-	robot.turn(-30, 50);
-	robot.drive(3, -70);
-
-	robot.turn(0, 50);
-	robot.drive(2.75, 70);
-
-	robot.turn(140, 50);
-	robot.drive(3, 70);
-
 	while (true) {
+		pros::lcd::print(1, "%f", robot.left_drive1.get_position());
 		pros::lcd::print(2, "%d", robot.tray.get_raw_position(NULL));
 		pros::lcd::print(3, "%d", robot.lift.get_raw_position(NULL));
 		pros::lcd::print(5, "%d", robot.rear_ultrasonic.get_value());
