@@ -223,6 +223,7 @@ void Robot::turn(double degrees){
     float kScale = 1;
 
     float drivevolt = 0;
+    float mindrivevolt = 30;
     float maxdrivevolt = 110;
 
     double error;
@@ -234,14 +235,17 @@ void Robot::turn(double degrees){
         derivative = error - prevError;
         prevError = error;
 
-        if((fabs(error) < 10)){
-            integral += error;
-        }else{
-            //integral = 0;
-            //keep integral as is
+        drivevolt = kScale * (error * kp + derivative * kd + integral * ki);
+
+        //give a mininum driving voltage
+        if(-mindrivevolt < drivevolt && drivevolt < 0){
+            drivevolt = -mindrivevolt;
         }
 
-        drivevolt = kScale * (error * kp + derivative * kd + integral * ki);
+        if(0 < drivevolt && drivevolt < mindrivevolt){
+            drivevolt = mindrivevolt;
+        }
+
         drivevolt = trim(drivevolt, -maxdrivevolt, maxdrivevolt);
 
         setDriveSpeed(drivevolt, -drivevolt);
@@ -249,14 +253,14 @@ void Robot::turn(double degrees){
         pros::delay(10);
 
     }
-    kp = 2.0;
+    kp = 3.0;
     kd = .32;
     ki = .04;
     kScale = 2.1;
 
     integral = 0;
     int minCorrectionLoops = 10;//ensure a minimum number of correction loops
-    while((fabs(imu.get_rotation() - degrees) > 1 && fabs(derivative) < 0.05) || minCorrectionLoops > 0) {
+    while(fabs(imu.get_rotation() - degrees) > 1 || minCorrectionLoops > 0) {
         minCorrectionLoops -= 1;
 
         error = degrees - imu.get_rotation();
