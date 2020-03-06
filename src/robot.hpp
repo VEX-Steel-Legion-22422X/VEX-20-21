@@ -80,7 +80,7 @@ Robot::Robot(int maxAcceleration, int maxDeceleration, int joystickDeadband)
 
 void Robot::initialize(){
     imu.reset();
-	while(imu.is_calibrating()){
+	while(imu.is_calibrating() || imu.get_rotation() == INFINITY){
 		pros::delay(10);
 	}
 }
