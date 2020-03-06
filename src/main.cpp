@@ -49,13 +49,38 @@ void competition_initialize() {
 
 void autonomous() {
 
+	robot.lift = -127;
+	pros::delay(1500);
+	robot.lift = 100;
+
 	robot.setIntakeSpeed(127);
-	robot.drive(2, 30);
+	robot.drive(2, 45);
+	robot.lift = 0;
 
-	pros::delay(1000);
+	pros::delay(400);
 
-	robot.turn(-60);
-	robot.drive(2, -50);
+	robot.turn(-57);
+	robot.drive(1.6, -100);
+	robot.turn(0);
+	robot.drive(2.5, 55);
+	robot.turn(155);
+
+	robot.setIntakeSpeed(-10);
+	robot.tray = 30;
+
+	robot.drive(2, 80);
+
+	robot.setIntakeSpeed(0);
+
+	while(robot.tray.get_raw_position(NULL) < 3300){
+		int speed = scale(robot.tray.get_raw_position(NULL), 1200, 3400, 128, 11);
+		robot.limitMotor(robot.tray, trim(robot.tray.get_raw_position(NULL) > 1200 ? speed : 128, 30, 128), 0, 3400);
+		pros::delay(25);
+	}
+
+	robot.tray = -20;
+	robot.drive(1, -50);
+
 /*
 	robot.turn(0, 50);
 	robot.drive(2.75, 70);
