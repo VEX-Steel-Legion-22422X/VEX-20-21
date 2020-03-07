@@ -35,6 +35,7 @@ void competition_initialize() {
 
 }
 
+
 /**
  * Runs the user autonomous code. This function will be started in its own task
  * with the default priority and stack size whenever the robot is enabled via
@@ -48,22 +49,89 @@ void competition_initialize() {
  */
 
 void autonomous() {
+	if(abs(autonSelection) == 3){
+		return;
+	}
 
+	//lift configuration --> deploy tray
 	robot.lift = -127;
-	pros::delay(1500);
+	pros::delay(1200);
 	robot.lift = 100;
+	pros::delay(500);
 
+	//begin intake
 	robot.setIntakeSpeed(127);
-	robot.drive(2, 45);
+
+	robot.drive(.5, 30);
+	robot.turn(0);
+	robot.drive(2.5, 30);
+	pros::delay(300);
+	robot.drive(.5, -30);
+
+	if(autonSelection < 0){
+		robot.turn(147);
+	}else if(autonSelection > 0){
+		robot.turn(-147);
+	}
+
+	robot.setIntakeSpeed(-10);
+	robot.tray = 30;
+
+	robot.drive(2, 72);
+
+	robot.setIntakeSpeed(0);
+
+	while(robot.tray.get_raw_position(NULL) < 3300){
+		int speed = scale(robot.tray.get_raw_position(NULL), 1200, 3400, 128, 11);
+		robot.limitMotor(robot.tray, trim(robot.tray.get_raw_position(NULL) > 1200 ? speed : 128, 30, 128), 0, 3400);
+		pros::delay(25);
+	}
+
+	robot.tray = -20;
+	robot.drive(1, -50);
+
+	/*
+	//lift configuration --> deploy tray
+	robot.lift = -127;
+	pros::delay(1000);
+	robot.lift = 100;
+	pros::delay(500);
+
+	//begin intake
+	robot.setIntakeSpeed(127);
+
+	//initial drive
+	robot.drive(.5, 45);
+	if(autonSelection < 0){
+		robot.turn(0);
+	}else{
+		robot.turn(-12);
+	}
+	robot.drive(1.4, 45);
+
+	//stop running lift motors
 	robot.lift = 0;
+	pros::delay(300);
+	robot.drive(.2, -45);
 
-	pros::delay(400);
 
-	robot.turn(-57);
+	pros::delay(200);
+
+	if(autonSelection < 0){
+		robot.turn(-57);
+	}else if(autonSelection > 0){
+		robot.turn(45);
+	}
+
 	robot.drive(1.6, -100);
 	robot.turn(0);
-	robot.drive(2.5, 55);
-	robot.turn(155);
+	robot.drive(2.5, 50);
+
+	if(autonSelection < 0){
+		robot.turn(155);
+	}else if(autonSelection > 0){
+		robot.turn(-155);
+	}
 
 	robot.setIntakeSpeed(-10);
 	robot.tray = 30;
@@ -80,40 +148,6 @@ void autonomous() {
 
 	robot.tray = -20;
 	robot.drive(1, -50);
-
-	//-----------------START MIRROR----------------------
-	/*robot.lift = -127;
-	pros::delay(1500);
-	robot.lift = 100;
-
-	robot.setIntakeSpeed(127);
-	robot.drive(2, 45);
-	robot.lift = 0;
-
-	pros::delay(400);
-
-	robot.turn(57);
-	robot.drive(1.6, -100);
-	robot.turn(0);
-	robot.drive(2.5, 55);
-	robot.turn(-155);
-
-	robot.setIntakeSpeed(-10);
-	robot.tray = 30;
-
-	robot.drive(2, 80);
-
-	robot.setIntakeSpeed(0);
-
-	while(robot.tray.get_raw_position(NULL) < 3300){
-		int speed = scale(robot.tray.get_raw_position(NULL), 1200, 3400, 128, 11);
-		robot.limitMotor(robot.tray, trim(robot.tray.get_raw_position(NULL) > 1200 ? speed : 128, 30, 128), 0, 3400);
-		pros::delay(25);
-	}
-
-	robot.tray = -20;
-	robot.drive(1, -50);*/
-	//----------------END MIRROR------------------
 
 
 /*
@@ -233,7 +267,7 @@ void opcontrol() {
 		if(master.get_digital(DIGITAL_L1)){
 			robot.setIntakeSpeed(127);
 		}else if(master.get_digital(DIGITAL_L2)){
-			robot.setIntakeSpeed(-100);
+			robot.setIntakeSpeed(-90);
 		}else{
 			robot.setIntakeSpeed(0);
 		}
@@ -260,7 +294,7 @@ void opcontrol() {
 		}
 
 		if(master.get_digital(DIGITAL_UP)){
-			int speed = scale(robot.tray.get_raw_position(NULL), 1200, 3400, 128, 11);
+			int speed = scale(robot.tray.get_raw_position(NULL), 1200, 3400, 128, 15);
 			robot.limitMotor(robot.tray, trim(robot.tray.get_raw_position(NULL) > 1200 ? speed : 128, 30, 128), 0, 3400);
 			pros::lcd::print(3, "%d", speed);
 		}else if(master.get_digital(DIGITAL_DOWN)){
