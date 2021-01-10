@@ -11,10 +11,10 @@ class Robot{
         pros::Motor right_drive2;
         pros::Motor left_intake;
         pros::Motor right_intake;
-        pros::Motor tray;
-        pros::Motor lift;
+        pros::Motor roller1; //top roller
+        pros::Motor roller2; //bottom roller
 
-        pros::ADIUltrasonic rear_ultrasonic;
+        //pros::ADIUltrasonic rear_ultrasonic;
     	pros::ADIDigitalIn front_limitswitch;
     	pros::Imu imu;
 
@@ -25,12 +25,15 @@ class Robot{
         void setDriveSpeed(int);
         void setDriveSpeed(int, int);
         void setIntakeSpeed(int);
+        void setRollerSpeed(int, int);
         int deadband(int, int);
         int cubifySpeed(int);
         int limitAcceleration(int, int, int, int);
         void limitMotor(pros::Motor, int, int, int);
         void forceLimitMotor(pros::Motor, int, int, int, int);
         void drive(double, int);
+        void driveSProfile(double);
+        void driveSineProfile(double);
         void turn(double);
 
     private:
@@ -44,22 +47,22 @@ class Robot{
 
 Robot::Robot(int maxAcceleration, int maxDeceleration, int joystickDeadband)
     :controller(pros::E_CONTROLLER_MASTER),
-    left_drive1(19, MOTOR_GEARSET_18, true, MOTOR_ENCODER_COUNTS),
+    left_drive1(19, MOTOR_GEARSET_18, false, MOTOR_ENCODER_COUNTS),
     left_drive2(12, MOTOR_GEARSET_18, true, MOTOR_ENCODER_COUNTS),
-    right_drive1(20, MOTOR_GEARSET_18, false, MOTOR_ENCODER_COUNTS),
+    right_drive1(20, MOTOR_GEARSET_18, true, MOTOR_ENCODER_COUNTS),
     right_drive2(11, MOTOR_GEARSET_18, false, MOTOR_ENCODER_COUNTS),
-    left_intake(1, MOTOR_GEARSET_18, false),
-    right_intake(2, MOTOR_GEARSET_18, true),
-    tray(5),
-    lift(6),
-    rear_ultrasonic(1, 2),
-    front_limitswitch(8),
-    imu(4)
+    left_intake(15, MOTOR_GEARSET_18, false),
+    right_intake(16, MOTOR_GEARSET_18, true),
+    roller1(6, MOTOR_GEARSET_18, true),
+    roller2(5, MOTOR_GEARSET_18, false),
+    //rear_ultrasonic(1, 2),
+    front_limitswitch('A'),
+    imu(7)
 {
     left_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
     right_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
-    tray.set_brake_mode(MOTOR_BRAKE_BRAKE);
-    lift.set_brake_mode(MOTOR_BRAKE_BRAKE);
+    //tray.set_brake_mode(MOTOR_BRAKE_BRAKE);
+    //lift.set_brake_mode(MOTOR_BRAKE_BRAKE);
 
     left_drive1.tare_position();
     left_drive2.tare_position();
@@ -67,15 +70,15 @@ Robot::Robot(int maxAcceleration, int maxDeceleration, int joystickDeadband)
     right_drive2.tare_position();
     left_intake.tare_position();
     right_intake.tare_position();
-    tray.tare_position();
-    lift.tare_position();
+    //roller1.tare_position();
+    //roller2.tare_position();
 
     leftSpeed = 0;
     leftSpeed = 0;
     maxAccel = maxAcceleration;
     maxDecel = maxDeceleration;
     joyDeadband = joystickDeadband;
-    ticksPerFoot = (900 * 3/5) / ((3.1415 * 3.25)/12);
+    ticksPerFoot = (900 * 3/5) / ((M_PI * 3.25)/12);
 }
 
 void Robot::initialize(){
@@ -134,6 +137,11 @@ void Robot::setDriveSpeed(int left, int right){
 void Robot::setIntakeSpeed(int speed){
     left_intake = speed;
     right_intake = speed;
+}
+
+void Robot::setRollerSpeed(int top, int bottom){
+    roller1 = top;
+    roller2 = bottom;
 }
 
 int Robot::deadband(int val, int limit){

@@ -53,12 +53,6 @@ void autonomous() {
 		return;
 	}
 
-	//lift configuration --> deploy tray
-	robot.lift = -127;
-	pros::delay(1200);
-	robot.lift = 100;
-	pros::delay(500);
-
 	//begin intake
 	robot.setIntakeSpeed(127);
 
@@ -75,12 +69,11 @@ void autonomous() {
 	}
 
 	robot.setIntakeSpeed(-10);
-	robot.tray = 30;
 
 	robot.drive(2, 72);
 
 	robot.setIntakeSpeed(0);
-
+/*
 	while(robot.tray.get_raw_position(NULL) < 3300){
 		int speed = scale(robot.tray.get_raw_position(NULL), 1200, 3400, 128, 11);
 		robot.limitMotor(robot.tray, trim(robot.tray.get_raw_position(NULL) > 1200 ? speed : 128, 30, 128), 0, 3400);
@@ -89,7 +82,7 @@ void autonomous() {
 
 	robot.tray = -20;
 	robot.drive(1, -50);
-
+*/
 	/*
 	//lift configuration --> deploy tray
 	robot.lift = -127;
@@ -238,12 +231,14 @@ void opcontrol() {
 	int lastLimit = 0;
 	int liftState = 0;
 
+	bool wasR1Pressed = false;
+	bool wasR2Pressed = false;
 	while (true) {
 		pros::lcd::print(1, "%f", robot.left_drive1.get_position());
-		pros::lcd::print(2, "%d", robot.tray.get_raw_position(NULL));
-		pros::lcd::print(3, "%d", robot.lift.get_raw_position(NULL));
-		pros::lcd::print(5, "%d", robot.rear_ultrasonic.get_value());
-		pros::lcd::print(6, "%f", robot.imu.get_rotation());
+		//pros::lcd::print(2, "%d", robot.tray.get_raw_position(NULL));
+		//pros::lcd::print(3, "%d", robot.lift.get_raw_position(NULL));
+		//pros::lcd::print(5, "%d", robot.rear_ultrasonic.get_value());
+		pros::lcd::print(2, "%f", robot.imu.get_rotation());
 
 		if(robot.front_limitswitch.get_value() == 1 && lastLimit == 0){
 			master.rumble("-");
@@ -272,6 +267,28 @@ void opcontrol() {
 			robot.setIntakeSpeed(0);
 		}
 
+		//roller logic
+		int roller_state = 0;
+		if(master.get_digital(DIGITAL_R1)){
+			roller_state++;
+		}
+		if(master.get_digital(DIGITAL_R2)){
+			roller_state--;
+		}
+
+		switch(roller_state){
+			case 1:
+				robot.setRollerSpeed(127, 127);
+				break;
+			case -1:
+				robot.setRollerSpeed(-127, -127);
+				break;
+			default:
+			 	robot.setRollerSpeed(0, 0);
+		}
+
+		//old competition code
+		/*
 		if(master.get_digital(DIGITAL_R2)) liftState = 0;
 		if(master.get_digital(DIGITAL_R1)) liftState = 1;
 		if(master.get_digital(DIGITAL_A)) liftState = 2;
@@ -281,8 +298,8 @@ void opcontrol() {
 			robot.forceLimitMotor(robot.lift, 0, 127, -1800, -1700);
 		}else if(liftState == 2){
 			robot.forceLimitMotor(robot.lift, 0, 127, -2500, -2400);
-		}
-
+		}*/
+/*
 		if(master.get_digital(DIGITAL_RIGHT)){
 			liftState = 3;
 			robot.lift = -120; //max encoder 2500
@@ -307,8 +324,7 @@ void opcontrol() {
 			}
 			robot.forceLimitMotor(robot.tray, 0, 100, trayLowerLimit, trayUpperLimit);
 			pros::lcd::print(4, "%d, %d", trayLowerLimit, trayUpperLimit);
-		}
-
-		pros::delay(25);
+		}*/
+		pros::delay(24);
 	}
 }
